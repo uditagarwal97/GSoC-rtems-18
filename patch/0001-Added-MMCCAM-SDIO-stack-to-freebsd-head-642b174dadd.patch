@@ -1,8 +1,9 @@
-From 7e6f317a556e0d8015cdc21585279610c88ac7f7 Mon Sep 17 00:00:00 2001
+From 7ad116121c7170f69e4d85f3443374f870a2a5d2 Mon Sep 17 00:00:00 2001
 From: Udit kumar agarwal <dev.madaarigmail.com>
-Date: Mon, 2 Jul 2018 02:52:31 +0530
-Subject: [PATCH] Updated MMCCAM stack to FreeBSD-head d6756a3ac8
+Date: Mon, 2 Jul 2018 04:43:35 +0530
+Subject: [PATCH] Added MMCCAM/SDIO stack to freebsd-head 642b174dadd
 
+Backported MMCCAM stack from freebsd-head d6756a3ac8 to freebsd-head 642b174dadd
 ---
  etc/mtree/BSD.include.dist               |    2 +
  include/Makefile                         |    2 +-
@@ -11,7 +12,7 @@ Subject: [PATCH] Updated MMCCAM stack to FreeBSD-head d6756a3ac8
  sys/arm/broadcom/bcm2835/bcm2835_sdhci.c |    4 +
  sys/arm/conf/BEAGLEBONE-MMCCAM           |   21 +
  sys/arm/conf/GENERIC-MMCCAM              |   22 +
- sys/arm/nvidia/tegra_sdhci.c             |    5 +
+ sys/arm/nvidia/tegra_sdhci.c             |    4 +
  sys/arm/ti/ti_sdhci.c                    |   29 +-
  sys/cam/ata/ata_all.c                    |    2 +-
  sys/cam/ata/ata_da.c                     |    6 +-
@@ -27,7 +28,7 @@ Subject: [PATCH] Updated MMCCAM stack to FreeBSD-head d6756a3ac8
  sys/cam/mmc/mmc.h                        |  104 ++
  sys/cam/mmc/mmc_all.h                    |   70 ++
  sys/cam/mmc/mmc_bus.h                    |    5 +
- sys/cam/mmc/mmc_da.c                     | 1899 ++++++++++++++++++++++++++++++
+ sys/cam/mmc/mmc_da.c                     | 1898 ++++++++++++++++++++++++++++++
  sys/cam/mmc/mmc_xpt.c                    | 1107 +++++++++++++++++
  sys/cam/nvme/nvme_da.c                   |    6 +-
  sys/cam/scsi/scsi_all.c                  |    2 +-
@@ -55,10 +56,10 @@ Subject: [PATCH] Updated MMCCAM stack to FreeBSD-head d6756a3ac8
  sys/dev/mmc/mmcbrvar.h                   |    1 -
  sys/dev/mmc/mmcreg.h                     |  102 ++
  sys/dev/sdhci/fsl_sdhci.c                |    5 +
- sys/dev/sdhci/sdhci.c                    |  564 ++++++++-
- sys/dev/sdhci/sdhci.h                    |   14 +
+ sys/dev/sdhci/sdhci.c                    |  563 ++++++++-
+ sys/dev/sdhci/sdhci.h                    |   13 +
  sys/dev/sdhci/sdhci_acpi.c               |    3 +
- sys/dev/sdhci/sdhci_fdt.c                |   51 +-
+ sys/dev/sdhci/sdhci_fdt.c                |   50 +-
  sys/dev/sdhci/sdhci_pci.c                |    8 +-
  sys/modules/sdhci/Makefile               |    2 +-
  usr.bin/sdiotool/Makefile                |    9 +
@@ -70,7 +71,7 @@ Subject: [PATCH] Updated MMCCAM stack to FreeBSD-head d6756a3ac8
  usr.bin/sdiotool/linux_sdio_compat.c     |  104 ++
  usr.bin/sdiotool/linux_sdio_compat.h     |   65 +
  usr.bin/sdiotool/sdiotool.c              |  649 ++++++++++
- 66 files changed, 6195 insertions(+), 102 deletions(-)
+ 66 files changed, 6190 insertions(+), 102 deletions(-)
  create mode 100644 sys/amd64/conf/MMCCAM
  create mode 100644 sys/arm/conf/BEAGLEBONE-MMCCAM
  create mode 100644 sys/arm/conf/GENERIC-MMCCAM
@@ -250,7 +251,7 @@ index 00000000000..20ca990d1c3
 +nodevice	mmc
 +nodevice	mmcsd
 diff --git a/sys/arm/nvidia/tegra_sdhci.c b/sys/arm/nvidia/tegra_sdhci.c
-index 0e9921fe2d6..66ff2d1e6d9 100644
+index 0e9921fe2d6..9693ea8101e 100644
 --- a/sys/arm/nvidia/tegra_sdhci.c
 +++ b/sys/arm/nvidia/tegra_sdhci.c
 @@ -62,6 +62,8 @@ __FBSDID("$FreeBSD$");
@@ -262,7 +263,7 @@ index 0e9921fe2d6..66ff2d1e6d9 100644
  /* Tegra SDHOST controller vendor register definitions */
  #define	SDMMC_VENDOR_CLOCK_CNTRL		0x100
  #define	 VENDOR_CLOCK_CNTRL_CLK_SHIFT			8
-@@ -463,5 +465,8 @@ static DEFINE_CLASS_0(sdhci, tegra_sdhci_driver, tegra_sdhci_methods,
+@@ -463,5 +465,7 @@ static DEFINE_CLASS_0(sdhci, tegra_sdhci_driver, tegra_sdhci_methods,
      sizeof(struct tegra_sdhci_softc));
  DRIVER_MODULE(sdhci_tegra, simplebus, tegra_sdhci_driver, tegra_sdhci_devclass,
      NULL, NULL);
@@ -270,7 +271,6 @@ index 0e9921fe2d6..66ff2d1e6d9 100644
  MODULE_DEPEND(sdhci_tegra, sdhci, 1, 1, 1);
  MMC_DECLARE_BRIDGE(sdhci);
 +#endif
-+
 diff --git a/sys/arm/ti/ti_sdhci.c b/sys/arm/ti/ti_sdhci.c
 index 6b188ddd072..cb7e9da65c8 100644
 --- a/sys/arm/ti/ti_sdhci.c
@@ -967,10 +967,10 @@ index 00000000000..db77da51078
 +#include <dev/mmc/bridge.h>
 diff --git a/sys/cam/mmc/mmc_da.c b/sys/cam/mmc/mmc_da.c
 new file mode 100644
-index 00000000000..aba2b2cb802
+index 00000000000..8f7dd8d3662
 --- /dev/null
 +++ b/sys/cam/mmc/mmc_da.c
-@@ -0,0 +1,1899 @@
+@@ -0,0 +1,1898 @@
 +/*-
 + * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
 + *
@@ -2869,10 +2869,9 @@ index 00000000000..aba2b2cb802
 +	return(cam_periph_error(ccb, cam_flags, sense_flags));
 +}
 +#endif /* _KERNEL */
-+
 diff --git a/sys/cam/mmc/mmc_xpt.c b/sys/cam/mmc/mmc_xpt.c
 new file mode 100644
-index 00000000000..63836313804
+index 00000000000..4f43582e4a8
 --- /dev/null
 +++ b/sys/cam/mmc/mmc_xpt.c
 @@ -0,0 +1,1107 @@
@@ -3876,7 +3875,7 @@ index 00000000000..63836313804
 +		if (mmcp->card_features & CARD_FEATURE_MMC)
 +			PROBE_SET_ACTION(softc, PROBE_MMC_SET_RELATIVE_ADDR);
 +		else
-+                	PROBE_SET_ACTION(softc, PROBE_SEND_RELATIVE_ADDR);
++			PROBE_SET_ACTION(softc, PROBE_SEND_RELATIVE_ADDR);
 +                break;
 +        }
 +        case PROBE_SEND_RELATIVE_ADDR: {
@@ -4190,7 +4189,7 @@ index ef83fc7c3cf..cd81186c801 100644
  
  static void
 diff --git a/sys/cam/scsi/scsi_xpt.c b/sys/cam/scsi/scsi_xpt.c
-index 065d433e5c7..ae8353bcb77 100644
+index 065d433e5c7..0a963a01cbb 100644
 --- a/sys/cam/scsi/scsi_xpt.c
 +++ b/sys/cam/scsi/scsi_xpt.c
 @@ -1160,8 +1160,8 @@ probedone(struct cam_periph *periph, union ccb *done_ccb)
@@ -4220,7 +4219,7 @@ index 065d433e5c7..ae8353bcb77 100644
  			    done_ccb->ccb_h.target_lun > 0 ?
 -			    SF_RETRY_UA|SF_QUIET_IR : SF_RETRY_UA,
 -			    &softc->saved_ccb) == ERESTART) {
-+			    SF_RETRY_UA|SF_QUIET_IR : SF_RETRY_UA) == 
++			    SF_RETRY_UA|SF_QUIET_IR : SF_RETRY_UA) ==
 +				ERESTART) {
  				goto outr;
  			}
@@ -4543,7 +4542,7 @@ index 00000000000..5d2baf6c412
 +#endif
 diff --git a/sys/dev/mmc/host/dwmmc_rockchip.c b/sys/dev/mmc/host/dwmmc_rockchip.c
 new file mode 100644
-index 00000000000..7a85e2d1f1d
+index 00000000000..0c30a1f5390
 --- /dev/null
 +++ b/sys/dev/mmc/host/dwmmc_rockchip.c
 @@ -0,0 +1,152 @@
@@ -4661,7 +4660,7 @@ index 00000000000..7a85e2d1f1d
 +		sc->bus_hz = clock = ios->clock;
 +		/* Set the MMC clock. */
 +		if (sc->ciu) {
-+			/* 
++			/*
 +			 * Apparently you need to set the ciu clock to
 +			 * the double of bus_hz
 +			 */
@@ -5013,7 +5012,7 @@ index 1b5f9371fb5..633f39a0246 100644
  MMC_DECLARE_BRIDGE(sdhci_fsl);
 +#endif
 diff --git a/sys/dev/sdhci/sdhci.c b/sys/dev/sdhci/sdhci.c
-index 26602ec57b4..de4d247fdbf 100644
+index 26602ec57b4..1d0281666db 100644
 --- a/sys/dev/sdhci/sdhci.c
 +++ b/sys/dev/sdhci/sdhci.c
 @@ -48,13 +48,21 @@ __FBSDID("$FreeBSD$");
@@ -5247,13 +5246,13 @@ index 26602ec57b4..de4d247fdbf 100644
  
  int
  sdhci_cleanup_slot(struct sdhci_slot *slot)
-@@ -1017,8 +1116,32 @@ done:
+@@ -1017,6 +1116,30 @@ done:
  	return (err);
  }
  
 +#ifdef MMCCAM
- static void
- sdhci_req_done(struct sdhci_slot *slot)
++static void
++sdhci_req_done(struct sdhci_slot *slot)
 +{
 +        union ccb *ccb;
 +
@@ -5275,11 +5274,9 @@ index 26602ec57b4..de4d247fdbf 100644
 +	}
 +}
 +#else
-+static void 
-+sdhci_req_done(struct sdhci_slot *slot)
+ static void
+ sdhci_req_done(struct sdhci_slot *slot)
  {
- 	struct mmc_request *req;
- 
 @@ -1030,6 +1153,7 @@ sdhci_req_done(struct sdhci_slot *slot)
  		req->done(req);
  	}
@@ -5298,10 +5295,10 @@ index 26602ec57b4..de4d247fdbf 100644
 +	mmcio = &slot->ccb->mmcio;
 +	if (mmcio->stop.opcode == MMC_STOP_TRANSMISSION
 +	    && !(slot->quirks & SDHCI_QUIRK_BROKEN_AUTO_STOP))
- 		mode |= SDHCI_TRNS_ACMD12;
++		mode |= SDHCI_TRNS_ACMD12;
 +#else
 +	if (slot->req->stop && !(slot->quirks & SDHCI_QUIRK_BROKEN_AUTO_STOP))
-+		mode |= SDHCI_TRNS_ACMD12;
+ 		mode |= SDHCI_TRNS_ACMD12;
 +#endif
  	if (slot->flags & SDHCI_USE_DMA)
  		mode |= SDHCI_TRNS_DMA;
@@ -5482,7 +5479,7 @@ index 26602ec57b4..de4d247fdbf 100644
 +	}
 +	/* Handle card interrupt. */
 +	if (intmask & SDHCI_INT_CARD_INT) {
-+		
++
  	}
  	/* The rest is unknown. */
  	if (intmask) {
@@ -5495,7 +5492,7 @@ index 26602ec57b4..de4d247fdbf 100644
  	switch (which) {
  	default:
  		return (EINVAL);
-@@ -1775,4 +1981,326 @@ sdhci_generic_write_ivar(device_t bus, device_t child, int which,
+@@ -1775,4 +1981,325 @@ sdhci_generic_write_ivar(device_t bus, device_t child, int which,
  	return (0);
  }
  
@@ -5821,9 +5818,8 @@ index 26602ec57b4..de4d247fdbf 100644
 +#endif /* MMCCAM */
 +
  MODULE_VERSION(sdhci, 1);
-+
 diff --git a/sys/dev/sdhci/sdhci.h b/sys/dev/sdhci/sdhci.h
-index 0b299150b99..fa2d949125b 100644
+index 0b299150b99..bb7d967f5bc 100644
 --- a/sys/dev/sdhci/sdhci.h
 +++ b/sys/dev/sdhci/sdhci.h
 @@ -28,6 +28,8 @@
@@ -5860,11 +5856,6 @@ index 0b299150b99..fa2d949125b 100644
  };
  
  int sdhci_generic_read_ivar(device_t bus, device_t child, int which,
-@@ -392,3 +405,4 @@ void sdhci_generic_set_uhs_timing(device_t brdev, struct sdhci_slot *slot);
- void sdhci_handle_card_present(struct sdhci_slot *slot, bool is_present);
- 
- #endif	/* __SDHCI_H__ */
-+
 diff --git a/sys/dev/sdhci/sdhci_acpi.c b/sys/dev/sdhci/sdhci_acpi.c
 index 54c2c56cc81..cf1b24cecaf 100644
 --- a/sys/dev/sdhci/sdhci_acpi.c
@@ -5878,7 +5869,7 @@ index 54c2c56cc81..cf1b24cecaf 100644
  MMC_DECLARE_BRIDGE(sdhci_acpi);
 +#endif
 diff --git a/sys/dev/sdhci/sdhci_fdt.c b/sys/dev/sdhci/sdhci_fdt.c
-index 2e1b30e4b37..4cadafcae36 100644
+index 2e1b30e4b37..165ac3eed72 100644
 --- a/sys/dev/sdhci/sdhci_fdt.c
 +++ b/sys/dev/sdhci/sdhci_fdt.c
 @@ -57,7 +57,17 @@ __FBSDID("$FreeBSD$");
@@ -5985,11 +5976,6 @@ index 2e1b30e4b37..4cadafcae36 100644
  	DEVMETHOD(mmcbr_acquire_host,	sdhci_generic_acquire_host),
  	DEVMETHOD(mmcbr_release_host,	sdhci_generic_release_host),
  
-@@ -307,3 +345,4 @@ DRIVER_MODULE(sdhci_fdt, simplebus, sdhci_fdt_driver, sdhci_fdt_devclass,
-     NULL, NULL);
- MODULE_DEPEND(sdhci_fdt, sdhci, 1, 1, 1);
- MMC_DECLARE_BRIDGE(sdhci_fdt);
-+
 diff --git a/sys/dev/sdhci/sdhci_pci.c b/sys/dev/sdhci/sdhci_pci.c
 index 7063ea5c262..86b90676d0d 100644
 --- a/sys/dev/sdhci/sdhci_pci.c
