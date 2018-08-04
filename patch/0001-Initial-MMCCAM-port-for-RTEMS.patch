@@ -1,8 +1,13 @@
-From e822b998bbd62e1b3e41a57920c6b61c8515fba2 Mon Sep 17 00:00:00 2001
+From d69504bae22e23771b7e197b24864886280cf4d0 Mon Sep 17 00:00:00 2001
 From: Udit kumar agarwal <dev.madaari@gmail.com>
 Date: Tue, 3 Jul 2018 14:37:42 +0530
 Subject: [PATCH] Initial MMCCAM port for RTEMS
 
+- Currently driver is able to to Detect and initialize all sort of SD/MMC/SDIO cards. It's able to read and modify registers.
+- However, several bugs exist in the part responsible for mounting the partitions using RTEMS media server.
+- More details on this can be found here:http://uditagarwal.in/index.php/2018/08/01/rtems-sdio-driver-current-progress/
+- This patch has been tested with rtems-libbsd commit id: commit id: 137250239e9e0b244eb924928e8d1ec7996dcfef
+- For details on how to use this patch, visit here: http://uditagarwal.in/index.php/2018/08/03/gsoc-2018-final-report/#use_sdio_code
 ---
  buildset/default-mmccam.ini                        |   13 +
  freebsd-org                                        |    2 +-
